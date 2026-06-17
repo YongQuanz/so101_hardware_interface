@@ -12,26 +12,21 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
-# ── Waveshare SCServo SDK (vendor/SCServo) ────────────────────────────────────
-# Clone the official SDK before building:
-#   git clone https://github.com/waveshare/SCServo_Linux.git vendor/SCServo/
-#
-# The SDK ships a CMakeLists.txt that builds libSCServo.a.
-# We add it as a subdirectory so CMake manages it.
+set(SCSERVO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SCServo/src")
 
-set(SCSERVO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SCServo")
+set(SCSERVO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SCServo/src")
 
-if(EXISTS "${SCSERVO_SDK_DIR}/CMakeLists.txt")
-  # Build the SDK as part of this package.
-  add_subdirectory(${SCSERVO_SDK_DIR} scservo_build)
+if(EXISTS "${SCSERVO_SDK_DIR}")
+  file(GLOB SCSERVO_SOURCES
+    ${SCSERVO_SDK_DIR}/*.cpp
+    ${SCSERVO_SDK_DIR}/*.c
+  )
+  add_library(scservo STATIC ${SCSERVO_SOURCES})
+  target_include_directories(scservo PUBLIC ${SCSERVO_SDK_DIR})
   set(SCSERVO_FOUND TRUE)
   message(STATUS "SCServo SDK found at ${SCSERVO_SDK_DIR}")
 else()
-  # SDK not present – build with stub so CI/linting still works.
-  message(WARNING
-    "SCServo SDK not found at ${SCSERVO_SDK_DIR}. "
-    "Building with stub driver (hardware won't work). "
-    "Clone the SDK: git clone https://github.com/waveshare/SCServo_Linux.git vendor/SCServo/")
+  message(WARNING "SCServo SDK not found at ${SCSERVO_SDK_DIR}. Building with stub driver.")
   set(SCSERVO_FOUND FALSE)
 endif()
 
@@ -60,7 +55,7 @@ ament_target_dependencies(
 
 if(SCSERVO_FOUND)
   target_include_directories(${PROJECT_NAME} PRIVATE ${SCSERVO_SDK_DIR})
-  target_link_libraries(${PROJECT_NAME} SCServo)   # target exported by SDK CMakeLists
+  target_link_libraries(${PROJECT_NAME} SCServo)       # Our own static target
   target_compile_definitions(${PROJECT_NAME} PRIVATE SCSERVO_SDK_FOUND)
 endif()
 
