@@ -37,44 +37,7 @@ so101_hardware_interface/
 └── package.xml
 ```
 
-## 1 — Clone the SCServo SDK
-
-The hardware driver wraps Waveshare's official C++ Linux SDK.
-Clone it into `vendor/SCServo/` before building:
-
-```bash
-cd so101_hardware_interface/vendor/SCServo
-git clone https://github.com/waveshare/SCServo_Linux.git .
-```
-
-> **Fallback:** if you downloaded the SDK zip from the Waveshare wiki, extract
-> it so that `vendor/SCServo/CMakeLists.txt` exists.
-
-Once the SDK is present, remove the `#error` line from `vendor/SCServo/SCServo.h`
-(the placeholder) and replace the stub include in `src/st_servo_driver.cpp`:
-
-```cpp
-// Replace:
-// #ifndef SCSERVO_SDK_FOUND  ... struct SMS_STS { ... };
-// With:
-#include <SCServo.h>
-```
-
-## 2 — Assign servo IDs
-
-Each physical servo must have a unique bus ID (1–253).
-Factory default is **1**. Use the SCServo `ChangeID` example to re-assign:
-
-```bash
-cd vendor/SCServo/examples/ChangeID
-make
-./ChangeID /dev/ttyUSB0 1 2   # change ID 1 → 2
-```
-
-Then update the `<param name="servo_id">` values in
-`config/so101_ros2_control.urdf.xacro` to match.
-
-## 3 — Build
+## 1 — Build
 
 ```bash
 cd ~/ros2_ws
@@ -83,7 +46,7 @@ colcon build --packages-select so101_hardware_interface
 source install/setup.bash
 ```
 
-## 4 — Launch
+## 2 — Launch
 
 ```bash
 # Default port /dev/ttyUSB0
@@ -95,7 +58,7 @@ ros2 launch so101_hardware_interface so101_bringup.launch.py \
   use_rviz:=true
 ```
 
-## 5 — Verify
+## 3 — Verify
 
 ```bash
 ros2 control list_hardware_interfaces
