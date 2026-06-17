@@ -25,8 +25,7 @@ so101_hardware_interface/
 │   ├── so101_hardware_interface.cpp
 │   └── st_servo_driver.cpp
 ├── vendor/
-│   └── SCServo/                       # ← clone SDK here (see below)
-│       └── SCServo.h                  # placeholder / setup instructions
+│   └── SCServo/src
 ├── config/
 │   ├── so101_ros2_control.urdf.xacro  # <ros2_control> hardware tag
 │   └── so101_controllers.yaml
