@@ -16,9 +16,9 @@ namespace so101_hardware_interface
 // ── on_init ───────────────────────────────────────────────────────────────────
 
 hardware_interface::CallbackReturn So101HardwareInterface::on_init(
-  const hardware_interface::HardwareInfo & info)
+  const hardware_interface::HardwareComponentInterfaceParams & params)
 {
-  if (hardware_interface::SystemInterface::on_init(info) !=
+  if (hardware_interface::SystemInterface::on_init(params) !=
       hardware_interface::CallbackReturn::SUCCESS)
   {
     return hardware_interface::CallbackReturn::ERROR;
