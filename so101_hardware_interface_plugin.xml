@@ -1,0 +1,11 @@
+<library path="so101_hardware_interface">
+  <class
+    name="so101_hardware_interface/So101HardwareInterface"
+    type="so101_hardware_interface::So101HardwareInterface"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      ros2_control hardware interface plugin for the SO-101 robot arm.
+      Provides position command and position/velocity state interfaces.
+    </description>
+  </class>
+</library>

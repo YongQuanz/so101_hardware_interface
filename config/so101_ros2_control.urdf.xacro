@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+<!--
+  so101_ros2_control.urdf.xacro
+  
+  Include this inside your main robot URDF/xacro.
+  Each joint maps to one Waveshare ST servo via the 'servo_id' parameter.
+  
+  Servo IDs must match the IDs programmed into the physical servos.
+  Default factory ID is 1. Use the Waveshare serial debug tool or
+  the SCServo SDK example 'ChangeID' to assign unique IDs per servo.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="so101">
+
+  <ros2_control name="So101HardwareInterface" type="system">
+
+    <hardware>
+      <plugin>so101_hardware_interface/So101HardwareInterface</plugin>
+
+      <!-- ── Connection parameters ──────────────────────────────────── -->
+      <!-- USB serial port exposed by the Waveshare Bus Servo Adapter    -->
+      <param name="device_port">/dev/ttyUSB0</param>
+      <!-- ST-series default baud rate: 1 000 000                       -->
+      <param name="baud_rate">1000000</param>
+      <!-- Comm timeout in seconds                                       -->
+      <param name="timeout">1.0</param>
+
+      <!-- ── Motion parameters ─────────────────────────────────────── -->
+      <!-- Speed in raw steps/s (0 = max servo speed, ~2400 typical)    -->
+      <param name="default_speed">0</param>
+      <!-- Acceleration 0–254 (0 = no limit)                            -->
+      <param name="default_acc">50</param>
+    </hardware>
+
+    <!-- ── Joints ─────────────────────────────────────────────────────
+         servo_id: matches the ID burned into each physical servo (1-253)
+         min/max:  position limits in radians
+                   ST3215 full range = ±π  (raw 0–4095, centre = 2048)
+    ──────────────────────────────────────────────────────────────────── -->
+
+    <joint name="shoulder_pan_joint">
+      <param name="servo_id">1</param>
+      <command_interface name="position">
+        <param name="min">-3.14159</param>
+        <param name="max"> 3.14159</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="shoulder_lift_joint">
+      <param name="servo_id">2</param>
+      <command_interface name="position">
+        <param name="min">-1.5708</param>
+        <param name="max"> 1.5708</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="elbow_flex_joint">
+      <param name="servo_id">3</param>
+      <command_interface name="position">
+        <param name="min">-3.14159</param>
+        <param name="max"> 3.14159</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="wrist_flex_joint">
+      <param name="servo_id">4</param>
+      <command_interface name="position">
+        <param name="min">-1.5708</param>
+        <param name="max"> 1.5708</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="wrist_roll_joint">
+      <param name="servo_id">5</param>
+      <command_interface name="position">
+        <param name="min">-3.14159</param>
+        <param name="max"> 3.14159</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+    <joint name="gripper_joint">
+      <param name="servo_id">6</param>
+      <command_interface name="position">
+        <param name="min">0.0</param>
+        <param name="max">1.5708</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+
+  </ros2_control>
+
+</robot>
