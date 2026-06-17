@@ -1,4 +1,4 @@
-# so101_hardware_interface
+# so101_hardware_interface (ROS2 Jazzy)
 
 A `ros2_control` **SystemInterface** plugin for the SO-101 robot arm,
 using the **Waveshare Bus Servo Adapter (A)** with ST/STS-series bus servos.
