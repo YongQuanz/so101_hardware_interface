@@ -29,19 +29,17 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <memory>
 
-// ── SCServo SDK forward declaration ──────────────────────────────────────────
-// Include the real header once you have cloned the SDK (see vendor/SCServo/).
-// For now we forward-declare SMS_STS so the wrapper header compiles cleanly.
-class SMS_STS;  // defined in vendor/SCServo/SMS_STS.h (part of SCServo SDK)
+#include "SMS_STS.h"
 
 namespace so101_hardware_interface
 {
 
 // Unit conversion constants for ST-series servos (12-bit, 0–4095 = 0–360°)
-static constexpr double RAW_TO_RAD = 2.0 * M_PI / 4096.0;  // ~0.001534 rad/step
-static constexpr double RAD_TO_RAW = 4096.0 / (2.0 * M_PI); // ~651.9 steps/rad
-static constexpr int16_t SERVO_CENTER = 2048;                 // 180° / zero point
+static constexpr double RAW_TO_RAD = 2.0 * 3.14159265358979323846 / 4096.0;  // ~0.001534 rad/step
+static constexpr double RAD_TO_RAW = 4096.0 / (2.0 * 3.14159265358979323846); // ~651.9 steps/rad
+static constexpr int16_t SERVO_CENTER = 2048;                                   // 180° / zero point
 
 struct ServoState
 {
@@ -108,7 +106,7 @@ private:
   std::string          port_;
   int                  baud_rate_;
   std::vector<uint8_t> servo_ids_;
-  SMS_STS *            sms_sts_{nullptr};   ///< Owning pointer; created in open()
+  std::unique_ptr<SMS_STS> sms_sts_;
 };
 
 }  // namespace so101_hardware_interface
