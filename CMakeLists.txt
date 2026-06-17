@@ -14,15 +14,12 @@ find_package(rclcpp_lifecycle REQUIRED)
 
 set(SCSERVO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SCServo/src")
 
-set(SCSERVO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SCServo/src")
-
 if(EXISTS "${SCSERVO_SDK_DIR}")
   file(GLOB SCSERVO_SOURCES
     ${SCSERVO_SDK_DIR}/*.cpp
-    ${SCSERVO_SDK_DIR}/*.c
   )
   add_library(scservo STATIC ${SCSERVO_SOURCES})
-  target_include_directories(scservo PUBLIC ${SCSERVO_SDK_DIR})
+  target_include_directories(scservo PRIVATE ${SCSERVO_SDK_DIR})
   set(SCSERVO_FOUND TRUE)
   message(STATUS "SCServo SDK found at ${SCSERVO_SDK_DIR}")
 else()
@@ -55,7 +52,7 @@ ament_target_dependencies(
 
 if(SCSERVO_FOUND)
   target_include_directories(${PROJECT_NAME} PRIVATE ${SCSERVO_SDK_DIR})
-  target_link_libraries(${PROJECT_NAME} SCServo)       # Our own static target
+  target_link_libraries(${PROJECT_NAME} scservo)       # Our own static target
   target_compile_definitions(${PROJECT_NAME} PRIVATE SCSERVO_SDK_FOUND)
 endif()
 
@@ -65,7 +62,7 @@ pluginlib_export_plugin_description_file(hardware_interface so101_hardware_inter
 
 # ── Install ───────────────────────────────────────────────────────────────────
 install(
-  TARGETS ${PROJECT_NAME}
+  TARGETS ${PROJECT_NAME} scservo
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
