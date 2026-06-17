@@ -23,9 +23,9 @@ so101_hardware_interface/
 │   └── st_servo_driver.hpp            # Waveshare SDK wrapper
 ├── src/
 │   ├── so101_hardware_interface.cpp
-│   └── st_servo_driver.cpp
-├── vendor/
-│   └── SCServo/src
+│   └── st_servo_driver.cpp            
+├── vendor/    
+│   └── SCServo                        # FEETECH BUS Servo Linux library          
 ├── config/
 │   ├── so101_ros2_control.urdf.xacro  # <ros2_control> hardware tag
 │   └── so101_controllers.yaml
