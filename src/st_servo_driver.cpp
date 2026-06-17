@@ -29,7 +29,6 @@ StServoDriver::StServoDriver(
 StServoDriver::~StServoDriver()
 {
   close();
-  delete sms_sts_;
 }
 
 // ── Open / Close ──────────────────────────────────────────────────────────────
@@ -39,17 +38,15 @@ bool StServoDriver::open()
   if (sms_sts_) {
     // Already open — close first.
     sms_sts_->end();
-    delete sms_sts_;
-    sms_sts_ = nullptr;
+    sms_sts_.reset();
   }
 
-  sms_sts_ = new SMS_STS();
+  sms_sts_ = std::make_unique<SMS_STS>();
 
   if (!sms_sts_->begin(baud_rate_, port_.c_str())) {
     RCLCPP_ERROR(
       rclcpp::get_logger("StServoDriver"),
       "Failed to open serial port '%s' at %d baud.", port_.c_str(), baud_rate_);
-    delete sms_sts_;
     sms_sts_ = nullptr;
     return false;
   }
@@ -184,20 +181,22 @@ bool StServoDriver::sync_write_positions(
     positions[i] = rad_to_raw(pos_rad[i]);
   }
 
-  int ret = sms_sts_->SyncWritePosEx(
+    sms_sts_->SyncWritePosEx(
     ids.data(),
     static_cast<uint8_t>(n),
     positions.data(),
     speeds.data(),
     accs.data());
 
+  // Spot-check first servo acknowledged the write
+  int ret = sms_sts_->FeedBack(ids[0]);
   if (ret < 0) {
-    RCLCPP_WARN_THROTTLE(
-      rclcpp::get_logger("StServoDriver"),
-      *rclcpp::Clock::make_shared(),
-      2000,
-      "SyncWritePosEx failed (ret=%d).", ret);
-    return false;
+      RCLCPP_WARN_THROTTLE(
+          rclcpp::get_logger("StServoDriver"),
+          *rclcpp::Clock::make_shared(),
+          2000,
+          "SyncWritePosEx failed (FeedBack ret=%d).", ret);
+      return false;
   }
   return true;
 }
