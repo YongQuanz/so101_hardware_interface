@@ -19,6 +19,7 @@ if(EXISTS "${SCSERVO_SDK_DIR}")
     ${SCSERVO_SDK_DIR}/*.cpp
   )
   add_library(scservo STATIC ${SCSERVO_SOURCES})
+  set_target_properties(scservo PROPERTIES POSITION_INDEPENDENT_CODE ON)
   target_include_directories(scservo PRIVATE ${SCSERVO_SDK_DIR})
   set(SCSERVO_FOUND TRUE)
   message(STATUS "SCServo SDK found at ${SCSERVO_SDK_DIR}")
