@@ -80,7 +80,7 @@ Speed conversion: `1 raw_step/s ≈ 0.001534 rad/s`
 
 | Parameter | Default | Description |
 |---|---|---|
-| `device_port` | `/dev/ttyUSB0` | Serial port of the Bus Servo Adapter |
+| `device_port` | `/dev/ttyACM0` | Serial port of the Bus Servo Adapter |
 | `baud_rate` | `1000000` | UART baud rate |
 | `timeout` | `1.0` | Comm timeout (s) |
 | `default_speed` | `0` | Motion speed in raw steps/s (0 = max) |
