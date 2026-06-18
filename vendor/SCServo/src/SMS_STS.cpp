@@ -6,6 +6,7 @@
  */
 
 #include "SMS_STS.h"
+#include <vector>
 
 SMS_STS::SMS_STS()
 {
@@ -52,7 +53,7 @@ int SMS_STS::RegWritePosEx(u8 ID, s16 Position, u16 Speed, u8 ACC)
 
 void SMS_STS::SyncWritePosEx(u8 ID[], u8 IDN, s16 Position[], u16 Speed[], u8 ACC[])
 {
-    u8 offbuf[7*IDN];
+    std::vector<u8> offbuf(7 * IDN);
     for(u8 i = 0; i<IDN; i++){
 		if(Position[i]<0){
 			Position[i] = -Position[i];
@@ -69,16 +70,16 @@ void SMS_STS::SyncWritePosEx(u8 ID[], u8 IDN, s16 Position[], u16 Speed[], u8 AC
 		}else{
 			offbuf[i*7] = 0;
 		}
-        Host2SCS(offbuf+i*7+1, offbuf+i*7+2, Position[i]);
-        Host2SCS(offbuf+i*7+3, offbuf+i*7+4, 0);
-        Host2SCS(offbuf+i*7+5, offbuf+i*7+6, V);
+        Host2SCS(offbuf.data()+i*7+1, offbuf.data()+i*7+2, Position[i]);
+        Host2SCS(offbuf.data()+i*7+3, offbuf.data()+i*7+4, 0);
+        Host2SCS(offbuf.data()+i*7+5, offbuf.data()+i*7+6, V);
     }
-    syncWrite(ID, IDN, SMS_STS_ACC, offbuf, 7);
+    syncWrite(ID, IDN, SMS_STS_ACC, offbuf.data(), 7);
 }
 
 void SMS_STS::SyncWriteSpe(u8 ID[], u8 IDN, s16 Speed[], u8 ACC[])
 {
-    u8 offbuf[7*IDN];
+    std::vector<u8> offbuf(7 * IDN);
     for(u8 i = 0; i<IDN; i++){
 		if(Speed[i]<0){
 			Speed[i] = -Speed[i];
@@ -89,11 +90,11 @@ void SMS_STS::SyncWriteSpe(u8 ID[], u8 IDN, s16 Speed[], u8 ACC[])
 		}else{
 			offbuf[i*7] = 0;
 		}
-        Host2SCS(offbuf+i*7+1, offbuf+i*7+2, 0);
-        Host2SCS(offbuf+i*7+3, offbuf+i*7+4, 0);
-        Host2SCS(offbuf+i*7+5, offbuf+i*7+6, Speed[i]);
+        Host2SCS(offbuf.data()+i*7+1, offbuf.data()+i*7+2, 0);
+        Host2SCS(offbuf.data()+i*7+3, offbuf.data()+i*7+4, 0);
+        Host2SCS(offbuf.data()+i*7+5, offbuf.data()+i*7+6, Speed[i]);
     }
-    syncWrite(ID, IDN, SMS_STS_ACC, offbuf, 7);
+    syncWrite(ID, IDN, SMS_STS_ACC, offbuf.data(), 7);
 }
 
 int SMS_STS::WheelMode(u8 ID)
