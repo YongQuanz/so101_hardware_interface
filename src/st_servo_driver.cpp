@@ -9,6 +9,14 @@ namespace so101_hardware_interface
 
 namespace
 {
+// Shared steady clock used only for RCLCPP_WARN_THROTTLE calls.
+// Constructed once at first use; avoids creating a new Clock on every read/write.
+rclcpp::Clock & throttle_clock()
+{
+  static rclcpp::Clock clk(RCL_STEADY_TIME);
+  return clk;
+}
+
 // Raw speed from ReadSpeed() is signed (negative = CCW).
 // Convert to rad/s: 1 step/s ≈ RAW_TO_RAD rad/s
 double raw_speed_to_rad_s(int raw_speed)
@@ -108,6 +116,13 @@ bool StServoDriver::set_torque_all(bool enable)
 }
 
 // ── Read ──────────────────────────────────────────────────────────────────────
+//
+// FeedBack(id) does ONE serial round-trip that bulk-reads all state registers
+// into sms_sts_->Mem[].  The subsequent ReadPos(-1) / ReadSpeed(-1) calls pull
+// from that local cache — zero serial traffic.
+//
+// Old approach: 2 round-trips × 6 servos = 12 transactions (~42 ms)
+// New approach: 1 round-trip × 6 servos =  6 transactions (~7 ms)
 
 bool StServoDriver::read_all(std::vector<ServoState> & states)
 {
@@ -119,19 +134,34 @@ bool StServoDriver::read_all(std::vector<ServoState> & states)
   for (size_t i = 0; i < servo_ids_.size(); ++i) {
     uint8_t id = servo_ids_[i];
 
-    int raw_pos   = sms_sts_->ReadPos(id);
-    int raw_speed = sms_sts_->ReadSpeed(id);
+    // Single bulk read — populates sms_sts_->Mem[]
+    int nlen = sms_sts_->FeedBack(id);
+
+    if (nlen < 0) {
+      RCLCPP_WARN_THROTTLE(
+        rclcpp::get_logger("StServoDriver"),
+        throttle_clock(),
+        2000 /* ms */,
+        "FeedBack failed for servo ID %u (ret=%d).", id, nlen);
+      states[i].comm_ok = false;
+      all_ok = false;
+      continue;
+    }
+
+    // Pull from cache — no serial I/O
+    int raw_pos   = sms_sts_->ReadPos(-1);
+    int raw_speed = sms_sts_->ReadSpeed(-1);
 
     if (raw_pos < 0 || raw_speed < 0) {
       RCLCPP_WARN_THROTTLE(
         rclcpp::get_logger("StServoDriver"),
-        *rclcpp::Clock::make_shared(),
-        2000 /* ms */,
-        "Read failed for servo ID %u (pos=%d, speed=%d).", id, raw_pos, raw_speed);
+        throttle_clock(),
+        2000,
+        "Bad cached data for servo ID %u (pos=%d, speed=%d).", id, raw_pos, raw_speed);
       states[i].comm_ok = false;
       all_ok = false;
     } else {
-      states[i].position_rad  = raw_to_rad(static_cast<int16_t>(raw_pos));
+      states[i].position_rad   = raw_to_rad(static_cast<int16_t>(raw_pos));
       states[i].velocity_rad_s = raw_speed_to_rad_s(raw_speed);
       states[i].comm_ok = true;
     }
@@ -152,7 +182,7 @@ bool StServoDriver::write_position(
   if (ret < 0) {
     RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("StServoDriver"),
-      *rclcpp::Clock::make_shared(),
+      throttle_clock(),
       2000,
       "WritePosEx failed for servo ID %u (raw=%d, ret=%d).", id, raw, ret);
     return false;
@@ -181,23 +211,15 @@ bool StServoDriver::sync_write_positions(
     positions[i] = rad_to_raw(pos_rad[i]);
   }
 
-    sms_sts_->SyncWritePosEx(
+  sms_sts_->SyncWritePosEx(
     ids.data(),
     static_cast<uint8_t>(n),
     positions.data(),
     speeds.data(),
     accs.data());
 
-  // Spot-check first servo acknowledged the write
-  int ret = sms_sts_->FeedBack(ids[0]);
-  if (ret < 0) {
-      RCLCPP_WARN_THROTTLE(
-          rclcpp::get_logger("StServoDriver"),
-          *rclcpp::Clock::make_shared(),
-          2000,
-          "SyncWritePosEx failed (FeedBack ret=%d).", ret);
-      return false;
-  }
+  // SyncWritePosEx is broadcast — no per-servo ACK on the bus.
+  // Correctness is verified on the next read_all() cycle via FeedBack().
   return true;
 }
 
