@@ -22,6 +22,7 @@ from launch.substitutions import (
     PathJoinSubstitution,
 )
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -52,14 +53,17 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration("use_rviz")
 
     # ── Robot description (URDF via xacro) ───────────────────────────
-    robot_description_content = Command(
-        [
-            FindExecutable(name="xacro"),
-            " ",
-            PathJoinSubstitution([pkg_share, "config", "so101_ros2_control.urdf.xacro"]),
-            " device_port:=",
-            device_port,
-        ]
+    robot_description_content = ParameterValue(
+        Command(
+            [
+                FindExecutable(name="xacro"),
+                " ",
+                PathJoinSubstitution([pkg_share, "config", "so101_ros2_control.urdf.xacro"]),
+                " device_port:=",
+                device_port,
+            ]
+        ),
+        value_type=str,
     )
     robot_description = {"robot_description": robot_description_content}
 
