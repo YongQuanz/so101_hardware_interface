@@ -47,6 +47,8 @@ hardware_interface::CallbackReturn So101HardwareInterface::on_init(
   hw_velocities_.assign(n, std::numeric_limits<double>::quiet_NaN());
   hw_commands_positions_.assign(n, std::numeric_limits<double>::quiet_NaN());
   servo_ids_.resize(n);
+  joint_accs_.resize(n);
+  joint_speeds_.resize(n);
 
   // ── Validate each joint and extract servo ID ─────────────────────────────
   for (size_t i = 0; i < n; ++i) {
@@ -81,6 +83,16 @@ hardware_interface::CallbackReturn So101HardwareInterface::on_init(
     servo_ids_[i] = static_cast<uint8_t>(std::stoi(joint.parameters.at("servo_id")));
     RCLCPP_INFO(logger_,
       "  Joint[%zu] '%s'  →  servo ID %u", i, joint.name.c_str(), servo_ids_[i]);
+
+    // per-joint acc: use joint param if present, else fall back to default_acc_
+    joint_accs_[i] = joint.parameters.count("acc")
+      ? static_cast<uint8_t>(std::stoi(joint.parameters.at("acc")))
+      : default_acc_;
+
+    // per-joint speed: use joint param if present, else fall back to default_speed_
+    joint_speeds_[i] = joint.parameters.count("speed")
+      ? static_cast<uint16_t>(std::stoi(joint.parameters.at("speed")))
+      : default_speed_;
   }
 
   RCLCPP_INFO(logger_, "on_init OK (%zu joints).", n);

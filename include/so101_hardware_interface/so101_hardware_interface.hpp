@@ -60,6 +60,9 @@ private:
   double               timeout_;
   uint16_t             default_speed_;  // raw steps/s  (0 = max)
   uint8_t              default_acc_;    // 0–254        (0 = no limit)
+  std::vector<uint8_t> joint_accs_;   // per-joint acceleration
+  std::vector<uint16_t> joint_speeds_; // per-joint speed (for future use)
+
 
   // Servo IDs parsed from URDF joint parameters
   std::vector<uint8_t> servo_ids_;

@@ -152,15 +152,17 @@ bool StServoDriver::read_all(std::vector<ServoState> & states)
     int raw_pos   = sms_sts_->ReadPos(-1);
     int raw_speed = sms_sts_->ReadSpeed(-1);
 
-    if (raw_pos < 0 || raw_speed < 0) {
-      RCLCPP_WARN_THROTTLE(
-        rclcpp::get_logger("StServoDriver"),
-        throttle_clock(),
-        2000,
-        "Bad cached data for servo ID %u (pos=%d, speed=%d).", id, raw_pos, raw_speed);
-      states[i].comm_ok = false;
-      all_ok = false;
+    if (raw_pos < 0) {
+    // raw_pos < 0 is the genuine error return from ReadPos(-1)
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("StServoDriver"),
+      throttle_clock(),
+      2000,
+      "Bad cached position for servo ID %u (pos=%d).", id, raw_pos);
+    states[i].comm_ok = false;
+    all_ok = false;
     } else {
+      // negative speed is valid — CCW motion
       states[i].position_rad   = raw_to_rad(static_cast<int16_t>(raw_pos));
       states[i].velocity_rad_s = raw_speed_to_rad_s(raw_speed);
       states[i].comm_ok = true;
@@ -195,16 +197,38 @@ bool StServoDriver::sync_write_positions(
   uint16_t speed,
   uint8_t acc)
 {
+  // Delegate to per-joint overload with uniform values
+  const size_t n = servo_ids_.size();
+  return sync_write_positions(
+    pos_rad,
+    std::vector<uint16_t>(n, speed),
+    std::vector<uint8_t> (n, acc));
+}
+
+bool StServoDriver::sync_write_positions(
+  const std::vector<double>   & pos_rad,
+  const std::vector<uint16_t> & speeds,
+  const std::vector<uint8_t>  & accs)
+{
   if (!sms_sts_) { return false; }
-  if (pos_rad.size() != servo_ids_.size()) { return false; }
 
   const size_t n = servo_ids_.size();
 
-  // SyncWritePosEx expects plain C arrays.
+  if (pos_rad.size() != n || speeds.size() != n || accs.size() != n) {
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("StServoDriver"),
+      throttle_clock(),
+      2000,
+      "sync_write_positions: size mismatch (ids=%zu pos=%zu speeds=%zu accs=%zu)",
+      n, pos_rad.size(), speeds.size(), accs.size());
+    return false;
+  }
+
+  // SyncWritePosEx expects plain C arrays
   std::vector<uint8_t>  ids(n);
   std::vector<int16_t>  positions(n);
-  std::vector<uint16_t> speeds(n, speed);
-  std::vector<uint8_t>  accs(n, acc);
+  std::vector<uint16_t> spd(speeds.begin(), speeds.end());
+  std::vector<uint8_t>  acc(accs.begin(),   accs.end());
 
   for (size_t i = 0; i < n; ++i) {
     ids[i]       = servo_ids_[i];
@@ -215,8 +239,8 @@ bool StServoDriver::sync_write_positions(
     ids.data(),
     static_cast<uint8_t>(n),
     positions.data(),
-    speeds.data(),
-    accs.data());
+    spd.data(),
+    acc.data());
 
   // SyncWritePosEx is broadcast — no per-servo ACK on the bus.
   // Correctness is verified on the next read_all() cycle via FeedBack().

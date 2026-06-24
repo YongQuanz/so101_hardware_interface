@@ -97,6 +97,17 @@ public:
     uint16_t speed = 0,
     uint8_t acc = 0);
 
+  /**
+ * Synchronised write to all servos with per-joint speed and acc.
+ * @param pos_rad  Positions in radians, indexed parallel to servo_ids_.
+ * @param speeds   Per-joint speed (raw steps/s; 0 = max)
+ * @param accs     Per-joint acceleration (0 = no limit)
+ */
+  bool sync_write_positions(
+    const std::vector<double>   & pos_rad,
+    const std::vector<uint16_t> & speeds,
+    const std::vector<uint8_t>  & accs);
+
   const std::vector<uint8_t> & servo_ids() const { return servo_ids_; }
 
 private:
