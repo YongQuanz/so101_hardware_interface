@@ -34,7 +34,7 @@ def generate_launch_description():
     declared_args = [
         DeclareLaunchArgument(
             "device_port",
-            default_value="/dev/ttyUSB0",
+            default_value="/dev/ttyACM0",
             description="Serial port for the SO-101.",
         ),
         DeclareLaunchArgument(
