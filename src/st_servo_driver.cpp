@@ -118,11 +118,12 @@ bool StServoDriver::set_torque_all(bool enable)
 // ── Read ──────────────────────────────────────────────────────────────────────
 //
 // FeedBack(id) does ONE serial round-trip that bulk-reads all state registers
-// into sms_sts_->Mem[].  The subsequent ReadPos(-1) / ReadSpeed(-1) calls pull
-// from that local cache — zero serial traffic.
+// into sms_sts_->Mem[].  All the ReadXxx(-1) calls below pull from that local
+// cache — zero additional serial traffic, regardless of how many of them we
+// call per servo.
 //
-// Old approach: 2 round-trips × 6 servos = 12 transactions (~42 ms)
-// New approach: 1 round-trip × 6 servos =  6 transactions (~7 ms)
+// Old approach (position+velocity only): 2 round-trips × 6 servos = 12 transactions (~42 ms)
+// New approach (full telemetry):         1 round-trip × 6 servos =  6 transactions (~7 ms)
 
 bool StServoDriver::read_all(std::vector<ServoState> & states)
 {
@@ -149,24 +150,46 @@ bool StServoDriver::read_all(std::vector<ServoState> & states)
     }
 
     // Pull from cache — no serial I/O
-    int raw_pos   = sms_sts_->ReadPos(-1);
-    int raw_speed = sms_sts_->ReadSpeed(-1);
+    int raw_pos    = sms_sts_->ReadPos(-1);
+    int raw_speed  = sms_sts_->ReadSpeed(-1);
+    int raw_load   = sms_sts_->ReadLoad(-1);
+    int raw_volt   = sms_sts_->ReadVoltage(-1);
+    int raw_temp   = sms_sts_->ReadTemper(-1);
+    int raw_move   = sms_sts_->ReadMove(-1);
+    int raw_curr   = sms_sts_->ReadCurrent(-1);
 
     if (raw_pos < 0) {
-    // raw_pos < 0 is the genuine error return from ReadPos(-1)
-    RCLCPP_WARN_THROTTLE(
-      rclcpp::get_logger("StServoDriver"),
-      throttle_clock(),
-      2000,
-      "Bad cached position for servo ID %u (pos=%d).", id, raw_pos);
-    states[i].comm_ok = false;
-    all_ok = false;
-    } else {
-      // negative speed is valid — CCW motion
-      states[i].position_rad   = raw_to_rad(static_cast<int16_t>(raw_pos));
-      states[i].velocity_rad_s = raw_speed_to_rad_s(raw_speed);
-      states[i].comm_ok = true;
+      // raw_pos < 0 is the genuine error return from ReadPos(-1)
+      RCLCPP_WARN_THROTTLE(
+        rclcpp::get_logger("StServoDriver"),
+        throttle_clock(),
+        2000,
+        "Bad cached position for servo ID %u (pos=%d).", id, raw_pos);
+      states[i].comm_ok = false;
+      all_ok = false;
+      continue;
     }
+
+    // negative speed is valid — CCW motion
+    states[i].position_rad   = raw_to_rad(static_cast<int16_t>(raw_pos));
+    states[i].velocity_rad_s = raw_speed_to_rad_s(raw_speed);
+
+    // Full telemetry — units per STS3215 register spec.
+    // Load / Voltage / Temper / Current can individually return -1 on a
+    // cache miss even when position succeeded; guard each rather than
+    // failing the whole servo's read.
+    states[i].load_percent  = (raw_load >= 0) ? raw_load / 10.0        : 0.0;   // 1000 raw = 100%
+    states[i].voltage       = (raw_volt >= 0) ? raw_volt * 0.1         : 0.0;   // 0.1V / count
+    states[i].current_ma    = (raw_curr >= 0) ? raw_curr * 6.5         : 0.0;   // 6.5mA / count
+    states[i].temperature_c = (raw_temp >= 0) ? static_cast<int16_t>(raw_temp) : 0;
+    states[i].moving        = (raw_move > 0);
+
+    // TODO: error_voltage / error_sensor / error_temperature / error_current /
+    // error_angle / error_overload — see the note in st_servo_driver.hpp.
+    // Left as false until the status register read is confirmed against
+    // this project's vendored SMS_STS.h.
+
+    states[i].comm_ok = true;
   }
 
   return all_ok;

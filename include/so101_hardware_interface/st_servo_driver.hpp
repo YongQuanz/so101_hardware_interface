@@ -8,7 +8,7 @@
  * Responsibilities:
  *  - Open / close the UART port (via SMS_STS::begin / end)
  *  - Convert between ROS units (radians, rad/s) and servo raw units (steps)
- *  - Read position + velocity for a set of servo IDs
+ *  - Read position + velocity + full telemetry for a set of servo IDs
  *  - Write position commands (single and synchronised)
  *  - Enable / disable torque per servo
  *
@@ -43,9 +43,32 @@ static constexpr int16_t SERVO_CENTER = 2048;                                   
 
 struct ServoState
 {
+  // Used by ros2_control state interfaces (position_rad/velocity_rad_s)
   double position_rad = 0.0;
   double velocity_rad_s = 0.0;
-  bool   comm_ok = false;
+
+  // Full STS3215 telemetry (for /servo_telemetry) — all cache reads from the
+  // same FeedBack() bulk transaction, so these come at zero extra bus cost.
+  double  load_percent    = 0.0;   // ReadLoad(-1) / 10.0        (1000 raw = 100%)
+  double  voltage         = 0.0;   // ReadVoltage(-1) * 0.1      (volts)
+  double  current_ma      = 0.0;   // ReadCurrent(-1) * 6.5      (milliamps)
+  int16_t temperature_c   = 0;     // ReadTemper(-1)             (°C)
+  bool    moving          = false; // ReadMove(-1)
+
+  // TODO: protection/status flags (Voltage/Sensor/Temperature/Current/Angle/
+  // Overload). These live in the servo's status register but this SDK build
+  // doesn't expose a confirmed public getter for it (only ReadLoad/Voltage/
+  // Temper/Move/Current/Mode are documented). Wire these up once you've
+  // checked whether SMS_STS.h has a raw register-read method, or a
+  // ReadStatus()/ReadError()-style call.
+  bool error_voltage     = false;
+  bool error_sensor      = false;
+  bool error_temperature = false;
+  bool error_current     = false;
+  bool error_angle       = false;
+  bool error_overload    = false;
+
+  bool comm_ok = false;
 };
 
 class StServoDriver
@@ -71,7 +94,7 @@ public:
   bool set_torque_all(bool enable);
 
   /**
-   * Read position (rad) and velocity (rad/s) for all configured servos.
+   * Read position, velocity, and full telemetry for all configured servos.
    * @param[out] states  Vector sized to match servo_ids_.
    * @return true if ALL reads succeeded.
    */

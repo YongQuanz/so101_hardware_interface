@@ -123,6 +123,13 @@ hardware_interface::CallbackReturn So101HardwareInterface::on_configure(
     return hardware_interface::CallbackReturn::ERROR;
   }
 
+  // Standalone node + publisher for /servo_telemetry. We don't spin this
+  // node — publishing doesn't require it, and read()/write() already run
+  // on the controller_manager's own real-time-ish cycle.
+  telemetry_node_ = std::make_shared<rclcpp::Node>("so101_hardware_interface_telemetry");
+  telemetry_pub_  = telemetry_node_->create_publisher<so101_msgs::msg::ServoTelemetryArray>(
+    "/servo_telemetry", rclcpp::SensorDataQoS());
+
   RCLCPP_INFO(logger_, "on_configure OK.");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -174,6 +181,7 @@ hardware_interface::CallbackReturn So101HardwareInterface::on_cleanup(
     driver_->close();
     driver_.reset();
   }
+  teardown_telemetry_publisher();
   RCLCPP_INFO(logger_, "on_cleanup OK.");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -189,6 +197,7 @@ hardware_interface::CallbackReturn So101HardwareInterface::on_shutdown(
     driver_->close();
     driver_.reset();
   }
+  teardown_telemetry_publisher();
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -203,7 +212,16 @@ hardware_interface::CallbackReturn So101HardwareInterface::on_error(
     driver_->close();
     driver_.reset();
   }
+  teardown_telemetry_publisher();
   return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+// ── teardown_telemetry_publisher ─────────────────────────────────────────────
+
+void So101HardwareInterface::teardown_telemetry_publisher()
+{
+  telemetry_pub_.reset();
+  telemetry_node_.reset();
 }
 
 // ── export_state_interfaces ───────────────────────────────────────────────────
@@ -251,6 +269,36 @@ hardware_interface::return_type So101HardwareInterface::read(
     }
     // On comm failure: keep last known values – the controller will time out
     // if the issue persists beyond the trajectory's goal_time constraint.
+  }
+
+  // Publish full STS3215 telemetry — independent of comm_ok per-servo, so a
+  // single dropped servo doesn't blank out the whole panel; its last-known
+  // ServoState values just get republished until the next good read.
+  if (telemetry_pub_ && telemetry_pub_->get_subscription_count() > 0) {
+    so101_msgs::msg::ServoTelemetryArray msg;
+    msg.header.stamp = telemetry_node_->now();
+    msg.servos.reserve(states.size());
+
+    for (size_t i = 0; i < states.size(); ++i) {
+      so101_msgs::msg::ServoTelemetry t;
+      t.id                  = servo_ids_[i];
+      t.position_deg        = states[i].position_rad * 180.0 / M_PI;
+      t.speed_steps_per_sec  = states[i].velocity_rad_s / RAW_TO_RAD;
+      t.load_percent        = states[i].load_percent;
+      t.voltage             = states[i].voltage;
+      t.current_ma          = states[i].current_ma;
+      t.temperature_c       = states[i].temperature_c;
+      t.moving              = states[i].moving;
+      t.error_voltage       = states[i].error_voltage;
+      t.error_sensor        = states[i].error_sensor;
+      t.error_temperature   = states[i].error_temperature;
+      t.error_current       = states[i].error_current;
+      t.error_angle         = states[i].error_angle;
+      t.error_overload      = states[i].error_overload;
+      msg.servos.push_back(t);
+    }
+
+    telemetry_pub_->publish(msg);
   }
 
   return ok ? hardware_interface::return_type::OK

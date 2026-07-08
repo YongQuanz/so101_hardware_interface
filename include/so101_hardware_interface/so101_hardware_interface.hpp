@@ -14,6 +14,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 
 #include "so101_hardware_interface/st_servo_driver.hpp"
+#include "so101_msgs/msg/servo_telemetry_array.hpp"
 
 namespace so101_hardware_interface
 {
@@ -54,6 +55,9 @@ public:
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
 private:
+  // Tears down the telemetry node/publisher. Shared by on_cleanup/on_shutdown/on_error.
+  void teardown_telemetry_publisher();
+
   // Hardware parameters (from URDF <param> tags)
   std::string          device_port_;
   int                  baud_rate_;
@@ -74,6 +78,12 @@ private:
 
   // Waveshare ST-servo driver
   std::unique_ptr<StServoDriver> driver_;
+
+  // Standalone node + publisher for /servo_telemetry. Publishing doesn't
+  // require spinning an executor, so this node never needs to be spun —
+  // it exists purely to own the publisher.
+  rclcpp::Node::SharedPtr telemetry_node_;
+  rclcpp::Publisher<so101_msgs::msg::ServoTelemetryArray>::SharedPtr telemetry_pub_;
 
   rclcpp::Logger logger_{rclcpp::get_logger("So101HardwareInterface")};
 };
