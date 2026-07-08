@@ -48,7 +48,7 @@ source install/setup.bash
 ## 2 — Launch
 
 ```bash
-# Default port /dev/ttyUSB0
+# Default port /dev/ttyACM0
 ros2 launch so101_hardware_interface so101_bringup.launch.py
 
 # Override port or motion parameters
