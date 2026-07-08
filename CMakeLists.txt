@@ -11,6 +11,7 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(so101_msgs REQUIRED)
 
 set(SCSERVO_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SCServo/src")
 
@@ -49,6 +50,7 @@ ament_target_dependencies(
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  so101_msgs
 )
 
 if(SCSERVO_FOUND)
@@ -82,6 +84,7 @@ ament_export_dependencies(
   pluginlib
   rclcpp
   rclcpp_lifecycle
+  so101_msgs
 )
 
 if(BUILD_TESTING)
