@@ -5,7 +5,7 @@
   <version>0.1.0</version>
   <description>ros2_control hardware interface plugin for the SO-101 robot arm.</description>
 
-  <maintainer email="yongquan6993@gmail.com">Yong</maintainer>
+  <maintainer email="rowbotworks@gmail.com">Yong</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
